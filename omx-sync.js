@@ -16,7 +16,7 @@ var currentPosition, totalDuration
 var bus; //main DBUS
 var gate = true;
 var omx;
-var button = 19
+var button = 19 // shutdown pushbuttom
 
 
 server.listen(3000, function() { console.log( 'Listening on port 3000') });
@@ -71,6 +71,28 @@ socket.on('connect', function(){
 
 });
 
+socket.on('shutDown', function(shutDown){
+  console.log('shutDown flag recieved  @ ' + Date());
+  setTimeout(function(){
+    //kill previous player if the script needs to restart
+    var killall = exec('killall omxplayer.bin', (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return;
+      }
+      console.log(`stdout: ${stdout}`);
+      console.log(`stderr: ${stderr}`);
+      exec('sudo halt', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`halt exec error: ${error}`);
+          return;
+        }
+        console.log(`exec halt stdout: ${stdout}`);
+      });
+    });
+  },1000)
+})
+
 socket.on('loopFlag', function(loopFlag){
   console.log('loop flag recieved  @ ' + Date());
   seek( s2micro(1) );
@@ -80,13 +102,15 @@ socket.on('loopFlag', function(loopFlag){
 })
 
 rpio.init({mapping: 'gpio'})
-rpio.open(button, rpio.INPUT, rpio.PULL_DOWN);
-function shutdown(pin)
+rpio.open(button, rpio.INPUT, rpio.PULL_UP);
+function checkShutdown()
 {
-        var state = rpio.read(pin) ? 'pressed' : 'released';
-        console.log('Button event on P%d (currently %s)', pin, state);
+        if(!rpio.read(button)){
+          //if reset is pressed then shutdown
+          io.emit('shutDown', { shutDown : 'true' });
+        }
 }
-rpio.poll(button, shutdown);
+setInterval(checkShutdown, 1000); //everySecond
 
 //DBUS HANDLING
 setTimeout(function(){ //wait for dbus to become available.
