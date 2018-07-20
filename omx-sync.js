@@ -1,21 +1,28 @@
 var fs = require('fs');
+var rpio = require('rpio');
+var config = JSON.parse(fs.readFileSync(process.argv.slice(2)[0], 'utf8'));
 var server = require('http').createServer();
-var socket = require('socket.io-client')('http://192.168.0.99:3000');
+var masterIP = config.masterIP
+var socket = require('socket.io-client')(`http://${masterIP}:3000`);
 // var io = require('socket.io')(server);
 var io = require('socket.io')(server, {'pingInterval': 10000, 'pingTimeout': 15000});
 var dbus = require('dbus-native');
 var exec = require('child_process').exec;
-var file = process.argv.slice(2)[0]; //get a path to the video argument
-var options = '-o hdmi -b --loop --no-osd '
-var currentPosition, totalDuration;
+var filePath = config.videoPath
+var videoAngle = config.orientation
+var aspectMode = config.aspectMode
+var options = `-o hdmi -b --loop --no-osd --orientation ${videoAngle} --aspect-mode ${aspectMode} `
+var currentPosition, totalDuration
 var bus; //main DBUS
 var gate = true;
 var omx;
+var button = 19
+
 
 server.listen(3000, function() { console.log( 'Listening on port 3000') });
 
 // PARSE TERMINAL INPUT.
-if(file == undefined){
+if(filePath == undefined){
   console.log("no video file specified");
   return
 }
@@ -30,10 +37,10 @@ var killall = exec('killall omxplayer.bin', (error, stdout, stderr) => {
   console.log(`stderr: ${stderr}`);
 });
 
-console.log('current video path: ' + file);
+console.log('current video path: ' + filePath);
 
 //start omx player
-omx = exec('omxplayer '+options+file, (error, stdout, stderr) => {
+omx = exec('omxplayer ' + options + filePath, (error, stdout, stderr) => {
   if (error) {
     console.error(`omxplayer exec error: ${error}`);
     return;
@@ -71,6 +78,15 @@ socket.on('loopFlag', function(loopFlag){
     gate = true;
   },1000)
 })
+
+rpio.init({mapping: 'gpio'})
+rpio.open(button, rpio.INPUT, rpio.PULL_DOWN);
+function shutdown(pin)
+{
+        var state = rpio.read(pin) ? 'pressed' : 'released';
+        console.log('Button event on P%d (currently %s)', pin, state);
+}
+rpio.poll(button, shutdown);
 
 //DBUS HANDLING
 setTimeout(function(){ //wait for dbus to become available.
@@ -133,5 +149,3 @@ function seek(pos){
 function s2micro(seconds){
   return seconds * 1000000;
 }
-
-
