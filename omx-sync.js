@@ -18,7 +18,6 @@ var gate = true;
 var omx;
 var button = 19 // shutdown pushbuttom
 
-
 server.listen(3000, function() { console.log( 'Listening on port 3000') });
 
 // PARSE TERMINAL INPUT.
@@ -100,6 +99,10 @@ socket.on('loopFlag', function(loopFlag){
     gate = true;
   },1000)
 })
+socket.on('goToZero', function(loopFlag){
+  console.log('goToZero flag recieved  @ ' + Date());
+  seek( s2micro(1) );
+})
 
 rpio.init({mapping: 'gpio'})
 rpio.open(button, rpio.INPUT, rpio.PULL_UP);
@@ -129,7 +132,9 @@ setTimeout(function(){ //wait for dbus to become available.
             totalDuration = duration; //set to a global
             console.log("Duration: " + totalDuration);
     });
-
+    setTimeout(function(){
+      io.emit('goToZero', { goToZero : 0 }),
+    5000 });
     //send out loop flag
     setInterval(function(){
       bus.invoke({
