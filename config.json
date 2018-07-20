@@ -2,5 +2,6 @@
     "orientation" : "90",
     "aspectMode" : "stretch",
     "videoPath" : "test.mp4",
-    "masterIP" : "10.10.1.1"
+    "masterIP" : "10.10.1.1",
+    "firstSyncTime" : "15000"
 }

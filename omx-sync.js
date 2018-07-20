@@ -11,6 +11,7 @@ var exec = require('child_process').exec;
 var filePath = config.videoPath
 var videoAngle = config.orientation
 var aspectMode = config.aspectMode
+var firstSyncTime = config.firstSyncTime
 var options = `-o hdmi -b --loop --no-osd --orientation ${videoAngle} --aspect-mode ${aspectMode} `
 var currentPosition, totalDuration
 var bus; //main DBUS
@@ -133,8 +134,8 @@ setTimeout(function(){ //wait for dbus to become available.
             console.log("Duration: " + totalDuration);
     });
     setTimeout(function(){
-      io.emit('goToZero', { goToZero : 0 }),
-    5000 });
+      io.emit('goToZero', { goToZero : 0 })
+    }, firstSyncTime);
     //send out loop flag
     setInterval(function(){
       bus.invoke({
